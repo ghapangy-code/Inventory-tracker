@@ -59,8 +59,6 @@ python main.py --enable-ml --ml-model xgboost --orange-strategy auto-confirm
 python main.py --enable-ml --ml-model lstm --orange-strategy auto-confirm
 ```
 
-See [ML_FEATURES.md](ML_FEATURES.md) for detailed ML documentation.
-
 3. **Run tests**
 
    ```bash
@@ -98,7 +96,6 @@ The project includes advanced Machine Learning capabilities:
    - Based on coefficient of variation
    - Informs inventory strategy and safety stock levels
 
-See [ML_FEATURES.md](ML_FEATURES.md) for comprehensive documentation.
 
 ## Stretch Goals
 
