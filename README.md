@@ -34,7 +34,6 @@ This project provides a Python-based tool for tracking inventory levels, identif
   Use `python main.py --help` to see additional options such as:
   - `--inventory path/to/file.csv` to load another dataset
   - `--save-plot output.png` to export the bar chart
-  - `--no-show-plot` to skip interactive display (headless mode)
   - `--orange-strategy {prompt,auto-confirm,auto-decline}` to control low-stock handling
   - `--enable-ml` to activate ML predictions for demand forecasting
   - `--ml-model {random_forest,xgboost,lstm}` to choose ML model type
@@ -50,7 +49,7 @@ python data/generate_sales_history.py
 Then run with ML predictions:
 ```bash
 # With Random Forest (default)
-python main.py --enable-ml --orange-strategy auto-confirm --no-show-plot
+python main.py --enable-ml --orange-strategy auto-confirm 
 
 # With XGBoost
 python main.py --enable-ml --ml-model xgboost --orange-strategy auto-confirm

@@ -5,14 +5,14 @@ Script to generate synthetic sales history data for ML model training.
 from __future__ import annotations
 
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
 
 def generate_sales_history(
-    product_ids: list[str],
+    list_p_ids: list[str],
     start_date: str = "2023-01-01",
     end_date: str = "2024-12-31",
     base_demand_range: tuple[int, int] = (5, 50),
@@ -43,10 +43,10 @@ def generate_sales_history(
 
     # Generate base demand for each product
     product_base_demand = {
-        pid: random.randint(*base_demand_range) for pid in product_ids
+        pid: random.randint(*base_demand_range) for pid in list_p_ids
     }
 
-    for product_id in product_ids:
+    for product_id in list_p_ids:
         base_demand = product_base_demand[product_id]
 
         for date in dates:
@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     print(f"Generating sales history for {len(product_ids)} products...")
     sales_df = generate_sales_history(
-        product_ids=product_ids,
+        list_p_ids=product_ids,
         start_date="2023-01-01",
         end_date="2024-12-31",
     )
@@ -101,4 +101,3 @@ if __name__ == "__main__":
     print(f"Saved to {output_path}")
     print("\nFirst few rows:")
     print(sales_df.head(10))
-
