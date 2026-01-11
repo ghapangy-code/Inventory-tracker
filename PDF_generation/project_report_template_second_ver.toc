@@ -1,0 +1,28 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}%
+\contentsline {section}{\numberline {2}Literature Review / Related Work}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Classical Inventory Models}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Demand Forecasting with Machine Learning}{4}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Volatility and Risk-Sensitive Policies}{4}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Methodology}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Data Description}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Approach}{5}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Rule-Based Stock Classification}{5}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Demand Forecasting and Volatility}{6}{subsubsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.3}Implementation}{7}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Results}{7}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Experimental Setup}{7}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Stock Classification Outcomes}{8}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Model Performance and Error Analysis}{8}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Comparison of Static and ML-Derived Reorder Quantities}{9}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Visualizations}{9}{subsection.4.5}%
+\contentsline {section}{\numberline {5}Discussion}{10}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Interpretation of Findings}{10}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Benefits of Volatility-Aware Policies}{10}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Limitations and Threats to Validity}{11}{subsection.5.3}%
+\contentsline {section}{\numberline {6}Conclusion and Future Work}{11}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Summary}{11}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Future Directions}{11}{subsection.6.2}%
+\contentsline {section}{References}{13}{section*.6}%
+\contentsline {section}{\numberline {A}Additional Figures}{14}{appendix.A}%
+\contentsline {section}{\numberline {B}Code Repository}{14}{appendix.B}%

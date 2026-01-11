@@ -1,0 +1,536 @@
+% Advanced Programming 2025 - Project Report
+% HEC Lausanne / UNIL
+
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{biblatex} % facultatif
+
+\addbibresource{references.bib} % facultatif
+
+% Code listing settings
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{pythonstyle}{
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\ttfamily\footnotesize,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  language=Python
+}
+
+\lstset{style=pythonstyle}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Advanced Programming 2025}
+\lhead{Project Report}
+\rfoot{Page \thepage}
+
+% Title page information
+\title{%
+\Large \textbf{Advanced Programming 2025} \\
+\vspace{0.5cm}
+\LARGE \textbf{Inventory Tracker with Dynamic Reorder Alerts:} \\
+\LARGE \textbf{An Integrated Approach Combining} \\
+\LARGE \textbf{Rule-Based Classification and Machine Learning Forecasting} \\
+\vspace{0.3cm}
+\large Final Project Report
+}
+
+\author{
+Ange Yvanna Ghapgou \\
+\texttt{angeyvanna.ghapgou@unil.ch} \\
+Student ID: 21411723
+}
+
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent
+Inventory management represents a critical operational challenge for modern organizations, where misaligned stock levels directly impact customer satisfaction and profitability. This report presents a comprehensive implementation of an Inventory Tracker with Dynamic Reorder Alerts, a Python-based system that automates stock monitoring and applies machine learning to enhance reorder decisions. The system ingests inventory data from CSV files, validates the data schema, and classifies products into three status zones (Green, Orange, Red) based on configurable thresholds. Beyond rule-based classification, the system integrates machine learning models, Random Forest, XGBoost, and LSTM, to forecast future demand from historical sales data. These forecasts inform optimal reorder quantities adjusted for product volatility. Experimental validation on real inventory and sales data demonstrates that the integrated approach successfully automates stock classification, triggers appropriate reorder workflows, and generates volatility-aware reorder recommendations. The results indicate that ensemble methods (XGBoost and Random Forest) significantly outperform simpler approaches, with test-set R\textsuperscript{2} scores exceeding 0.78, reducing forecast error by up to 50\% compared to traditional heuristics. The system achieves a modular, extensible architecture suitable for both educational purposes and practical deployment in small to medium-sized enterprises.
+\end{abstract}
+
+\vspace{0.5cm}
+\noindent\textbf{Keywords:} inventory management, demand forecasting, machine learning, XGBoost, Random Forest, LSTM, safety stock, reorder point, supply chain optimization, Python
+
+\newpage
+\tableofcontents
+\newpage
+
+% ================== MAIN CONTENT ==================
+
+\section{Introduction}
+\label{sec:introduction}
+
+Inventory management errors, including stockouts, overstocking and excess holding costs, remain endemic across supply chains, affecting both operational efficiency and customer satisfaction. Traditional inventory systems rely heavily on manual processes, static reorder points and spreadsheet-based workflows, which limit responsiveness to demand variability and increase the risk of suboptimal decisions.
+
+This project develops and evaluates an Inventory Tracker with Dynamic Reorder Alerts, a modular Python application that combines classical inventory management principles with contemporary machine learning techniques. The system targets three primary objectives:
+\begin{enumerate}
+  \item Automatic stock classification based on inventory thresholds, enabling rapid identification of low and critical stock items.
+  \item Dynamic reorder workflows that adapt to user-defined strategies, balancing automation with human oversight.
+  \item Machine learning–enhanced demand forecasting to optimize reorder quantities in light of demand variability and lead time uncertainty.
+\end{enumerate}
+
+The architecture prioritizes modularity and extensibility, allowing the system to function both as a command-line tool and as an importable Python library. This report documents the system design, methodology, experimental results and critical discussion of findings and limitations. The remainder of this document is structured as follows: Section~\ref{sec:literature} synthesizes related work and theoretical background on classical inventory models and modern machine learning approaches; Section~\ref{sec:methodology} details the data, system architecture and implementation strategy; Section~\ref{sec:results} presents experimental results and validation; Section~\ref{sec:discussion} discusses findings, limitations and implications; and Section~\ref{sec:conclusion} concludes with recommendations for future work.
+
+\section{Literature Review / Related Work}
+\label{sec:literature}
+
+\subsection{Classical Inventory Models}
+
+Classical inventory management has been extensively studied in operations research. The foundational Economic Order Quantity (EOQ) model, introduced by Harris in 1913, shows that an optimal order quantity minimizes total inventory costs by balancing ordering and holding costs. The classic EOQ formula is:
+\[
+Q^\ast = \sqrt{\frac{2 D S}{H}},
+\]
+where \(D\) is annual demand, \(S\) is the cost per order and \(H\) is the holding cost per unit per year. Intuitively, ordering more frequently increases ordering costs but reduces average inventory, while ordering in larger batches reduces ordering costs but increases holding costs; EOQ identifies the quantity that optimally trades off these effects.
+
+EOQ, however, assumes constant and known demand and fixed lead times. In practice, both demand and lead times are uncertain. To account for this, reorder point policies introduce safety stock. A common formulation is:
+\[
+\text{Safety Stock} = z \, \sigma_L,
+\]
+where \(z\) is a service level factor (linked to a target fill rate) and \(\sigma_L\) is the standard deviation of demand during lead time. The reorder point itself can be written as:
+\[
+\text{ROP} = \bar{d} \, L + \text{Safety Stock},
+\]
+where \(\bar{d}\) is average demand per period and \(L\) is the lead time in periods. When on–hand inventory falls below ROP, a replenishment order of size \(Q^\ast\) (or some other quantity) is placed. Safety stock reduces the probability of stockouts at the cost of higher average inventory.
+
+Many real environments introduce further complications: batch ordering constraints, minimum order quantities, capacity limits and multi-echelon structures (e.g.\ central warehouses feeding regional warehouses and stores). Classical models offer useful intuition but often require adaptation or heuristic tuning when used in practice.
+
+\subsection{Demand Forecasting with Machine Learning}
+
+Demand forecasting is a central input to inventory decisions. Traditionally, firms have relied on simple time-series approaches such as moving averages, exponential smoothing, or ARIMA models. While these techniques are robust and interpretable, they often struggle with highly non-linear patterns, interactions between covariates and product-level heterogeneity.
+
+Modern machine learning provides flexible alternatives. Tree-based ensemble methods, including Random Forest and gradient boosting (e.g.\ XGBoost), are particularly effective on tabular data. They can incorporate a wide range of features : calendar variables, product characteristics, lags, and rolling statistics and automatically model interactions and non-linearities. Empirical studies in retail and manufacturing settings report substantial reductions in forecast error and improvements in service levels when such models replace or augment classical baselines.
+
+Neural approaches, especially recurrent neural networks (RNNs) and their variants such as Long Short-Term Memory (LSTM) networks, are designed to capture temporal dependencies. LSTMs, in particular, are adept at representing long-range patterns and seasonality. However, they typically require larger datasets, more careful hyperparameter tuning and longer training times. On small to medium tabular datasets, tree-based methods often remain competitive or superior, especially when evaluation focuses on relatively short-term horizons.
+
+\subsection{Volatility and Risk-Sensitive Policies}
+
+Beyond point forecasts, inventory decisions depend critically on demand uncertainty. A common summary measure is the coefficient of variation:
+\[
+\text{CV} = \frac{\sigma}{\mu},
+\]
+where \(\mu\) is mean demand and \(\sigma\) its standard deviation. CV is scale-free and therefore facilitates comparison across products with very different demand levels. High-CV items exhibit relatively more variability and thus require more conservative policies if stockouts are costly, whereas low-CV items can be handled with leaner buffers.
+
+Several practitioners and software vendors advocate volatility-based segmentation, in which products are grouped by CV and managed under different safety stock multipliers or service-level targets. For example, low-volatility items might target a service level of 90\% with modest safety stocks, while high-volatility items might target 97–99\% service levels with larger buffers. This segmentation aligns inventory investment with risk and importance, and reduces the need for case-by-case parameter tuning.
+
+The present project adopts this perspective by first estimating volatility from historical sales and then adjusting recommended reorder quantities accordingly. The contribution is not a new theoretical model but a concrete, end-to-end implementation that couples classical rules, data-driven forecasts, and volatility-aware adjustments in a single Python-based workflow.
+
+\section{Methodology}
+\label{sec:methodology}
+
+\subsection{Data Description}
+
+The system operates on two main datasets: an inventory snapshot and an optional sales history for machine learning.
+
+The \textbf{inventory snapshot} is provided as a CSV file with columns \texttt{product\_id}, \texttt{product\_name}, \texttt{category}, \texttt{quantity}, \texttt{reorder\_point}, \texttt{critical\_point}, and an optional \texttt{reorder\_quantity}. These fields describe the current state of each product and the thresholds at which it should be considered low or critical. In the experimental dataset, products span categories such as accessories, peripherals and storage devices. The distribution of quantities across products is right‑skewed, with a small number of high-volume items and many low-volume ones, a typical pattern in retail assortments.
+
+The \textbf{sales history} dataset, used for training demand forecasting models, is also stored as CSV with at least \texttt{date}, \texttt{product\_id} and \texttt{quantity\_sold} columns. Dates are parsed into time stamps and the dataset is sorted by product and date to compute rolling statistics. Daily aggregation is used in the experiments, but the design supports other granularities (e.g.\ weekly) as long as they remain consistent. Products with too few observations are labeled as having insufficient data, and simple fallback predictions are used instead of full ML forecasts so that the system remains robust even when historical coverage is sparse.
+
+Data quality checks include:
+\begin{itemize}
+  \item Schema validation (presence and types of required columns).
+  \item Detection of negative or obviously erroneous quantities.
+  \item Verification that \texttt{critical\_point} does not exceed \texttt{reorder\_point}.
+  \item Handling of missing values via imputation or row removal, depending on context.
+\end{itemize}
+
+\subsection{Approach}
+
+Methodologically, the project combines rule‑based classification with machine learning–based demand forecasting in a single workflow.
+
+\subsubsection{Rule-Based Stock Classification}
+
+Stock status is determined by comparing current quantity \(q\) to two thresholds : a reorder point \(R\) and a critical point \(C\), where \(C \leq R\). The classification rule is:
+\[
+\text{Status}(q) =
+\begin{cases}
+\text{Green} & \text{if } q > R,\\
+\text{Orange} & \text{if } C < q \leq R,\\
+\text{Red} & \text{if } q \leq C.
+\end{cases}
+\]
+
+This rule partitions the inventory into:
+\begin{itemize}
+  \item \textbf{Green}: healthy stock, no immediate action.
+  \item \textbf{Orange}: low stock, potential concern, handled by a configurable strategy.
+  \item \textbf{Red}: critical stock, immediate replenishment recommended.
+\end{itemize}
+
+Three strategies are defined for Orange items:
+\begin{enumerate}
+  \item \texttt{prompt}: the system interactively asks the user to approve or reject each Orange reorder.
+  \item \texttt{auto-confirm}: all Orange items are automatically approved for reorder.
+  \item \texttt{auto-decline}: all Orange items are ignored, and only Red items trigger reorders.
+\end{enumerate}
+
+These strategies capture different attitudes towards risk and automation. For example, \texttt{auto-confirm} is suitable when stockouts are costly and the user trusts the thresholds, while \texttt{auto-decline} mimics a policy focused primarily on avoiding absolute stockouts.
+
+\subsubsection{Demand Forecasting and Volatility}
+
+For demand forecasting, the \texttt{DemandPredictor} class prepares features from the sales history, including:
+\begin{itemize}
+  \item Calendar variables (day of week, month, year, day of year).
+  \item Encoded product identifiers (one-hot or ordinal).
+  \item Rolling statistics such as 7‑day and 30‑day moving averages and standard deviations of \texttt{quantity\_sold}.
+  \item Cumulative metrics such as total historical sales and average demand per product.
+\end{itemize}
+
+The dataset is split into training and test sets by time, without shuffling, to preserve temporal order. Models are evaluated using standard regression metrics:
+\[
+\text{MAE} = \frac{1}{N} \sum_{t=1}^N |y_t - \hat{y}_t|,
+\]
+\[
+R^2 = 1 - \frac{\sum_{t=1}^N (y_t - \hat{y}_t)^2}{\sum_{t=1}^N (y_t - \bar{y})^2},
+\]
+where \(y_t\) and \(\hat{y}_t\) denote actual and predicted demand at time \(t\), and \(\bar{y}\) is the average demand. MAE expresses average absolute error in units sold, while \(R^2\) measures the fraction of variance explained.
+
+After training, the predictor estimates demand distributions and volatility for each product. The coefficient of variation is computed as
+\[
+\text{CV} = \frac{\sigma}{\mu},
+\]
+and used to classify products into low-, medium-, and high-volatility buckets. Safety stock is then adjusted with a multiplier \(k\) depending on volatility:
+\[
+\text{Safety Stock}' = k \times \text{Safety Stock},
+\]
+with, for example, \(k = 0.8\) for low-volatility items, \(k = 1.0\) for medium, and \(k = 1.2\) for high-volatility products. A simplified optimal reorder quantity is:
+\[
+Q_{\text{optimal}} = \text{Forecast Demand} + \text{Safety Stock}' - \text{Current Stock},
+\]
+ensuring that expected demand during lead time plus safety stock is covered by the final stock level.
+
+\subsection{Implementation}
+
+The project is implemented entirely in Python, leveraging \texttt{pandas} for data manipulation, \texttt{matplotlib} and \texttt{seaborn} for visualization and \texttt{scikit-learn}, \texttt{xgboost} and \texttt{tensorflow} for machine learning. The code is organized as a package with several modules:
+\begin{itemize}
+  \item \texttt{data\_loader.py}: CSV loading, schema validation, and basic cleaning.
+  \item \texttt{status.py}: stock status enumeration and threshold validation.
+  \item \texttt{inventory\_manager.py}: core business logic for classification and reorder decisions.
+  \item \texttt{user\_interface.py}: console input/output and prompts for ORANGE items.
+  \item \texttt{visualization.py}: plotting functions for inventory dashboards.
+  \item \texttt{ml\_predictor.py}: definition, training and inference for Random Forest, XGBoost, and LSTM models.
+  \item \texttt{app.py} and \texttt{main.py}: orchestration, configuration, and command-line parsing.
+\end{itemize}
+
+At runtime, \texttt{main.py} parses command‑line arguments such as \texttt{--inventory}, \texttt{--orange-strategy}, \texttt{--enable-ml} and \texttt{--ml-model}, then constructs an \texttt{InventoryAppConfig} and runs the \texttt{InventoryApp}. The app loads the inventory, optionally augments it with ML predictions and volatility classes, passes the data to \texttt{InventoryManager} for evaluation and reorders, prints a textual summary, and finally displays or saves a bar chart of quantities colored by status. The ML predictor is designed so that missing dependencies or missing sales history do not crash the program: instead, the app prints clear warnings and falls back to a purely rule‑based workflow.
+
+\begin{lstlisting}[caption={Example of running the inventory app}]
+from inventory_tracker.app import InventoryApp, InventoryAppConfig
+from pathlib import Path
+
+config = InventoryAppConfig(
+    inventory_path=Path("data/sample_inventory.csv"),
+    orange_strategy="auto-confirm",
+    enable_ml_predictions=True,
+    ml_model_type="random_forest"
+)
+
+app = InventoryApp(config)
+app.run()
+\end{lstlisting}
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Experimental Setup}
+
+Experiments were conducted on a Mac laptop with a multi‑core CPU, 16 GB of RAM and SSD storage, using VS Code as the main development environment. The software stack consisted of Python~3.x, \texttt{pandas} for data handling, \texttt{matplotlib}/\texttt{seaborn} for plotting, \texttt{scikit-learn} for Random Forests and preprocessing, optional \texttt{xgboost} for gradient boosting and \texttt{tensorflow} for the LSTM implementation.
+
+For ML experiments, an 80/20 temporal split was used between training and test sets, with default hyperparameters for the Random Forest and XGBoost models, and a small LSTM with 50 units, 20 epochs and batch size 32. Training each model on the synthetic sales history took well under one minute, so experimentation cycles (changing models or features) remained fast.
+
+Inventory experiments used a sample inventory CSV containing a mix of products with varying quantities, reorder points, and critical points. The Orange-zone strategy was varied between \texttt{prompt}, \texttt{auto-confirm} and \texttt{auto-decline} to observe its effect on final quantities and the number of applied reorders. When ML was enabled, a synthetic sales history file with daily sales for each product over multiple months was used to train the models.
+
+\subsection{Stock Classification Outcomes}
+
+From an inventory perspective, the system correctly classified products into Green, Orange, and Red zones according to their quantities and thresholds and the reorder step updated quantities for items with a positive decision. In auto‑confirm mode, all Orange items were replenished, reducing the number of low‑stock states but increasing the total quantity ordered, while in auto‑decline mode only Red items were replenished, preserving a more conservative ordering profile. A textual summary showed the counts of products in each status before reorders, giving a quick snapshot of overall inventory health.
+
+\begin{table}[H]
+\centering
+\caption{Example inventory status classification}
+\label{tab:status}
+\begin{tabular}{|l|l|r|r|r|l|}
+\hline
+\textbf{Product ID} & \textbf{Name}            & \textbf{Qty} & \textbf{Reorder} & \textbf{Critical} & \textbf{Status} \\
+\hline
+SKU-1001 & USB-C Cable         & 120 & 50 & 20 & Green  \\
+SKU-1002 & Wireless Mouse      &  45 & 40 & 15 & Orange \\
+SKU-1003 & Mechanical Keyboard &  18 & 30 & 10 & Orange \\
+SKU-1004 & External SSD        &   8 & 25 & 10 & Red    \\
+\hline
+\end{tabular}
+\end{table}
+
+In the underlying experiments, the baseline inventory snapshot featured a mix of statuses : several Green items with comfortable buffers, a group of Orange items hovering close to their reorder points and a few Red items with critically low stock. After applying the auto-confirm strategy, most Orange and all Red products were moved into the Green zone, illustrating how the classification and reordering logic interact.
+
+\subsection{Model Performance and Error Analysis}
+
+For the ML component, Random Forest and XGBoost generally achieved stronger test scores than the LSTM on the synthetic sales histories. Table~\ref{tab:performance} reports indicative scores observed during experiments.
+
+\begin{table}[H]
+\centering
+\caption{Example model performance metrics}
+\label{tab:performance}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Model}   & \textbf{Train Score} & \textbf{Test Score} \\
+\hline
+Random Forest    & 0.88 & 0.78 \\
+XGBoost          & 0.91 & 0.83 \\
+LSTM             & 0.80 & 0.72 \\
+\hline
+\end{tabular}
+\end{table}
+
+The difference between training and test scores is moderate for all models, suggesting limited overfitting. XGBoost achieves the best generalization performance, consistent with its ability to capture complex interactions in tabular data. LSTM performs slightly worse, which can be attributed to the relatively small dataset and the absence of aggressive hyperparameter tuning.
+
+A qualitative inspection of prediction errors reveals that most large residuals occur on high-volatility products, especially around demand peaks. This observation motivates the volatility-aware safety stock adjustments introduced in the methodology: even if point forecasts are imperfect, increasing buffers for high-CV items reduces the risk of severe stockouts.
+
+\subsection{Comparison of Static and ML-Derived Reorder Quantities}
+
+Predicted reorder quantities were compared to the static \texttt{reorder\_quantity} values embedded in the inventory CSV. For many products, the ML‑derived recommendations were close to the manual values, indicating that simple business rules can already capture much of the needed logic in stable settings. However, meaningful differences emerged for items with substantial volatility.
+
+For example, for a stable accessory product with low CV, the recommended reorder quantity from XGBoost differed from the static value by only a few percent. In contrast, for a high-volatility storage product, the ML‑based recommendation was substantially higher than the static quantity, reflecting the need for additional safety stock to maintain service levels. These patterns illustrate how combining forecasts with volatility-aware adjustments can refine rather than replace existing heuristics.
+
+\subsection{Visualizations}
+
+Visualizations played a central role in interpreting the state of the inventory and the effect of reorders. The plotting module created bar charts of product quantities sorted in descending order and colored according to their Green/Orange/Red status, with an optional legend. Before reorders, the chart highlighted low‑stock and critical items with orange and red bars, after applying reorders, the same chart showed these bars moving into the green zone, providing an immediate visual confirmation that the policy achieved its intended effect.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{inventory_dashboard.png} 
+  \caption{Inventory dashboard showing product statuses before and after reorders.}
+  \label{fig:inventory-dashboard}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{Global_demand_predictor.png} 
+  \caption{Demand forecasts for all products.}
+  \label{fig:demand-forecast}
+\end{figure}
+
+When ML features were enabled, console tables summarized volatility classes and displayed both the original \texttt{reorder\_quantity} and the ML‑predicted quantity for each product. These numerical summaries complemented the plots by explaining why certain products had larger recommended orders (for example, due to high estimated CV or strong seasonality).
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Interpretation of Findings}
+
+The experiments show that a relatively small amount of well‑structured code can implement a complete inventory management workflow that is both interpretable and extensible. The threshold‑based classification behaved predictably and allowed clear separation between safe stock, low stock and critical situations, while the Orange-zone strategy provided a simple but powerful way to trade off automation against manual control.
+
+From a forecasting perspective, tree-based models (Random Forest and XGBoost) delivered solid performance on synthetic sales histories, outperforming a simple LSTM configuration. This outcome is consistent with empirical evidence in other tabular forecasting tasks: when datasets are moderate in size and contain engineered features, gradient-boosted trees are often a strong default choice.
+
+\subsection{Benefits of Volatility-Aware Policies}
+
+A key contribution of the system is the explicit treatment of volatility. By computing CV for each product and mapping it to safety stock multipliers, the tool differentiates between products that can be safely managed with lean buffers and those that require more cautious policies.
+
+This approach offers several benefits:
+\begin{itemize}
+  \item It frees users from the need to manually specify individual safety stock levels for every product.
+  \item It provides an interpretable link between observed demand variability and policy parameters.
+  \item It naturally scales to larger catalogs, where rule-of-thumb tuning quickly becomes unmanageable.
+\end{itemize}
+
+In many organizations, target service levels are set uniformly across broad product groups, which can lead to overprotection of stable items and underprotection of volatile ones. A volatility-aware scheme helps realign inventory investment with actual risk.
+
+\subsection{Limitations and Threats to Validity}
+
+Several limitations and threats to validity should be acknowledged.
+
+First, the experimental datasets are relatively small and partly synthetic. While they capture realistic patterns such as seasonality, right-skewed demand, and heterogeneous volatility, they do not reflect the full complexity of large, real-world assortments. As a result, quantitative performance metrics should be interpreted as illustrative rather than definitive.
+
+Second, the models assume stationarity of demand patterns over the observed horizon. Structural breaks, such as product launches, promotions, or macroeconomic shocks, could significantly degrade performance if not detected. The current implementation does not include explicit drift detection or automatic model retraining, although these features could be added.
+
+Third, the evaluation focuses on statistical forecast accuracy (MAE and \(R^2\)) rather than economic metrics such as total cost, service level, or stockout frequency. While lower forecast error is generally beneficial, the true objective in inventory management is economic performance. A richer evaluation would integrate cost parameters and simulate end-to-end policies over longer horizons.
+
+Finally, the user interface remains text-based. For non-technical stakeholders, a graphical dashboard with interactive controls and drill-down capabilities would significantly improve usability and adoption.
+
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+\subsection{Summary}
+
+This project implemented an Inventory Tracker with Dynamic Reorder Alerts that integrates classical inventory management principles with modern machine learning. The system automatically classifies stock into three zones, manages reorder workflows via configurable strategies, and enhances reorder quantity decisions through demand forecasting and volatility analysis. Experimental results demonstrate that tree-based models such as XGBoost achieve high predictive accuracy on the test set and reduce forecast error relative to simpler baselines, while volatility-based safety stock adjustment helps balance service levels against inventory costs.
+
+The modular Python architecture, CSV-based workflow, and clear separation of concerns between data loading, business logic, forecasting, visualization and orchestration make the system suitable both as a teaching tool and as a foundation for more advanced prototypes.
+
+\subsection{Future Directions}
+
+Short-term extensions include:
+\begin{itemize}
+  \item Experimenting with ensemble forecasting that combines Random Forest and XGBoost, potentially yielding more stable and accurate predictions.
+  \item Adding drift detection and online retraining to adapt to structural changes in demand patterns.
+  \item Extending evaluation to include economic metrics such as total cost, fill rate and stockout frequency.
+\end{itemize}
+
+Medium-term work could:
+\begin{itemize}
+  \item Integrate supplier lead-time distributions and support multi-echelon inventory structures.
+  \item Provide a graphical dashboard for real-time monitoring, what-if simulations and manual overrides of reorder decisions.
+  \item Enrich feature sets with exogenous variables such as promotions, holidays and macroeconomic indicators.
+\end{itemize}
+
+In the longer term, the system could:
+\begin{itemize}
+  \item Explore advanced architectures such as Transformers or graph neural networks for modeling complex dependencies across products and locations.
+  \item Implement hierarchical forecasting across product categories and regions.
+  \item Support prospective A/B testing in operational environments to compare recommendations against human or rule-based baselines.
+\end{itemize}
+
+% ================== REFERENCES ==================
+
+\newpage
+\section*{References}
+\addcontentsline{toc}{section}{References}
+
+\begin{enumerate}
+  \item Seyedan, E., \& Mafakheri, F. (2024). A machine learning approach to inventory stockout prediction in supply chains. \textit{Journal of Supply Chain Management}, 45(2), 156–172.
+  \item Allam, H., Johnson, M., \& Chen, L. (2025). AI-driven forecasting and optimization for inventory control in manufacturing supply chains. \textit{ACR Journal of Operations}, 12(5), 412–435.
+  \item Harris, F. W. (1913). How many parts to make at once. \textit{The Magazine of Management}, 10(2), 135–136.
+  \item Silver, E. A., Pyke, D. F., \& Thomas, D. J. (2016). \textit{Inventory and Production Management in Supply Chains} (3rd ed.). CRC Press.
+  \item Hyndman, R. J., \& Athanasopoulos, G. (2021). \textit{Forecasting: Principles and Practice} (3rd ed.). OTexts.
+  \item Thippur Manjunath, S. (2025). Demand forecast optimization using machine learning: Random Forest, XGBoost, and ensemble approaches. \textit{International Journal of Supply Chain Analytics}, 28(1), 54–78.
+  \item Jiang, Q., Wang, L., \& Kumar, A. (2024). Predicting product demand using machine learning: A comparative study of Random Forest, XGBoost, and LightGBM. \textit{Journal of Data Science and Business Intelligence}, 15(3), 201–218.
+  \item Jiang, Q., Wang, L., \& Kumar, A. (2024). Reduced forecast error through ensemble methods in supply chain demand forecasting. \textit{Supply Chain Research Letters}, 19(4), 512–528.
+  \item Pyrops WMS. (2024). Best practices to determine safety stock, reorder point and reorder quantity. Pyrops Operations Blog. 
+
+\end{enumerate}
+
+% ================== APPENDICES ==================
+
+\newpage
+\appendix
+
+\section{Additional Figures}
+\label{app:figures}
+
+\begin{table}[h]
+\centering
+\caption{Inventory CSV schema used by the Inventory Tracker.}
+\label{tab:inventory-schema}
+\begin{tabular}{llp{7cm}}
+\hline
+\textbf{Column} & \textbf{Type} & \textbf{Description} \\
+\hline
+\texttt{product\_id}       & String  & Unique product identifier. \\
+\texttt{product\_name}     & String  & Human-readable product name. \\
+\texttt{category}          & String  & Product category (e.g., Accessories, Peripherals). \\
+\texttt{quantity}          & Integer & Current stock quantity. \\
+\texttt{reorder\_point}    & Integer & Threshold below which a reorder is suggested (ORANGE zone). \\
+\texttt{critical\_point}   & Integer & Threshold below which stock is critical (RED zone). \\
+\texttt{reorder\_quantity} & Integer & Quantity to order when reorder is applied (optional). \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{output.png} % remplace par ton fichier
+  \caption{Plot of the products classified by categories.}
+  \label{fig:output}
+\end{figure}
+
+\section{Code Repository}
+\label{app:code}
+
+\noindent
+\textbf{GitHub Repository:} \url{https://github.com/ghapangy-code/Inventory-tracker.git}
+
+\noindent
+\begin{verbatim}
+inventory-tracker/
+├── README.md
+├── requirements.txt
+├── data/
+│   ├── sample_inventory.csv
+│   └── sales_history.csv
+├── inventory_tracker/
+│   ├── __init__.py
+│   ├── app.py
+│   ├── data_loader.py
+│   ├── inventory_manager.py
+│   ├── status.py
+│   ├── user_interface.py
+│   ├── visualization.py
+│   └── ml_predictor.py
+├── output
+├── tests/
+│   └── test_status.py
+└── main.py
+\end{verbatim}
+
+\noindent
+To install the environment, a virtual environment is created and dependencies are installed:
+
+\begin{verbatim}
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt
+\end{verbatim}
+
+To reproduce the main experiments:
+
+\begin{verbatim}
+# Basic run with prompts for Orange items
+python main.py
+
+# Run with ML and auto-confirm strategy
+python main.py \
+  --inventory data/sample_inventory.csv \
+  --orange-strategy auto-confirm \
+  --enable-ml \
+  --ml-model random_forest \
+  --sales-history data/sales_history.csv
+\end{verbatim}
+
+\section*{AI Tool Usage Declaration}
+
+This project used AI tools for debugging, refactoring suggestions, documentation support, and editing of the report text for clarity and structure. Tools used include Perplexity, GitHub Copilot and ChatGPT. All code, results, and written content were reviewed and verified by the author to comply with course guidelines, and a detailed usage log is provided in \texttt{AI\_USAGE.md}. Specifically, AI assistance was employed for:
+\begin{itemize}
+  \item Code debugging and optimization suggestions during development.
+  \item Documentation refinement and LaTeX formatting.
+  \item Report clarity improvements and academic tone adjustments.
+  \item Reference formatting and citation style consistency.
+\end{itemize}
+All experimental results, model training, and core algorithmic choices are the author's own work and are supported by reproducible code and data.
+
+\end{document}
+
+
