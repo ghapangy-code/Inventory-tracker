@@ -11,6 +11,12 @@ from inventory_tracker.app import InventoryApp, InventoryAppConfig
 
 
 def parse_args() -> argparse.Namespace:
+    """
+    Parse command-line arguments for the Inventory Tracker.
+    Returns:
+        argparse.Namespace: The parsed arguments including inventory path,
+        ML options, and strategy flags.
+    """
     parser = argparse.ArgumentParser(description="Inventory Tracker with Dynamic Reorder Alerts")
     parser.add_argument(
         "--inventory",
@@ -61,6 +67,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """
+    Application entry point.
+
+    It parses CLI arguments, builds the InventoryAppConfig,
+    creates the InventoryApp, and runs the full workflow.
+    """
     args = parse_args()
     config = InventoryAppConfig(
         inventory_path=args.inventory,
@@ -78,4 +90,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
