@@ -53,5 +53,4 @@ def plot_inventory_status(df: pd.DataFrame, save_path: Optional[str | Path] = No
         plt.savefig(save_path)
         print(f"Saved inventory visualization to {save_path}")
 
-    plt.show()
-
+plt.show()
